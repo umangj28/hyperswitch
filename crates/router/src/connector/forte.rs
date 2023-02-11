@@ -18,7 +18,7 @@ use crate::{
     }
 };
 
-
+use super::utils::RefundsRequestData;
 use transformers as forte;
 
 #[derive(Debug, Clone)]
@@ -473,7 +473,8 @@ impl
     }
 
     fn get_url(&self, _req: &types::RefundsRouterData<api::Execute>, _connectors: &settings::Connectors,) -> CustomResult<String,errors::ConnectorError> {
-        todo!()
+        // todo!()
+        Ok(format!("{}", self.base_url(_connectors),))
     }
 
     fn get_request_body(&self, req: &types::RefundsRouterData<api::Execute>) -> CustomResult<Option<String>,errors::ConnectorError> {
@@ -522,8 +523,19 @@ impl
         self.common_get_content_type()
     }
 
-    fn get_url(&self, _req: &types::RefundSyncRouterData,_connectors: &settings::Connectors,) -> CustomResult<String,errors::ConnectorError> {
-        todo!()
+    fn get_url( &self,
+        _req: &types::RefundSyncRouterData,
+        _connectors: &settings::Connectors,
+    ) -> CustomResult<String, errors::ConnectorError> {
+        let refund_id = _req.request.get_connector_refund_id()?;
+        let rp = 
+            format!(
+            "{}/trn_{}",
+            self.base_url(_connectors),
+            refund_id
+        );
+        println!("refund req: {}",rp);
+        Ok(rp)
     }
 
     fn build_request(

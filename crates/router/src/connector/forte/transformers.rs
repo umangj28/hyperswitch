@@ -244,17 +244,41 @@ impl TryFrom<&types::PaymentsCancelRouterData> for FortePaymentsVoidRequest {
 //TODO: Fill the struct with respective fields
 // REFUND :
 // Type definition for RefundRequest
+
 #[derive(Default, Debug, Serialize)]
-pub struct ForteRefundRequest {}
+pub struct ForteRefundRequest {
+    action : String, 
+    authorization_amount:f32,
+    original_transaction_id:String,
+    authorization_code:String
+}
 
 impl<F> TryFrom<&types::RefundsRouterData<F>> for ForteRefundRequest {
     type Error = error_stack::Report<errors::ParsingError>;
     fn try_from(_item: &types::RefundsRouterData<F>) -> Result<Self,Self::Error> {
-       todo!()
+    //    todo!()
+    let v :Vec<&str> = _item.request.connector_transaction_id.as_str().split(":_:").collect();
+    Ok(Self {
+        action: "reverse".to_string() ,
+        authorization_amount: _item.request.refund_amount as f32,
+        original_transaction_id : v[0].to_string(),
+        // original_transaction_id: "trn_ac0b85e9-c9f2-4cf4-8666-e2bdfc3cd784".to_string(),
+        authorization_code : v[1].to_string()
+    })
+    
     }
+    // println!("something --> {payment_request:?}");
+    // let tmp = serde_json::to_string(&payment_request);
+    // println!("something2 --> {tmp:?}");
 }
 
-// Type definition for Refund Response
+#[derive(Debug, Clone, Default, Serialize, Deserialize, Eq, PartialEq)]
+pub enum ForteStatus {
+    F01,
+    N01,
+    #[default]
+    A01,
+}
 
 #[allow(dead_code)]
 #[derive(Debug, Serialize, Default, Deserialize, Clone)]
@@ -265,20 +289,30 @@ pub enum RefundStatus {
     Processing,
 }
 
-impl From<RefundStatus> for enums::RefundStatus {
-    fn from(item: RefundStatus) -> Self {
+impl From<ForteStatus> for enums::RefundStatus {
+    fn from(item: ForteStatus) -> Self {
         match item {
-            RefundStatus::Succeeded => Self::Success,
-            RefundStatus::Failed => Self::Failure,
-            RefundStatus::Processing => Self::Pending,
+            ForteStatus::A01 => Self::Success,
+            ForteStatus::F01 => Self::Failure,
+            ForteStatus::N01 => Self::Pending,
             //TODO: Review mapping
         }
     }
 }
 
+
+#[derive(Debug, Serialize, Default, Deserialize, Clone)]
+pub struct ForteRefundResponse {
+    response_type : String, 
+    response_code:ForteStatus,
+    response_desc:String,
+}
+
 //TODO: Fill the struct with respective fields
-#[derive(Default, Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Default, Deserialize, Clone)]
 pub struct RefundResponse {
+    transaction_id : String,
+    response: ForteRefundResponse
 }
 
 impl TryFrom<types::RefundsResponseRouterData<api::Execute, RefundResponse>>
@@ -288,7 +322,17 @@ impl TryFrom<types::RefundsResponseRouterData<api::Execute, RefundResponse>>
     fn try_from(
         _item: types::RefundsResponseRouterData<api::Execute, RefundResponse>,
     ) -> Result<Self, Self::Error> {
-        todo!()
+        // todo!()
+        // let refund_status = RefundStatus::Succeeded;
+        let refund_status = enums::RefundStatus::from(_item.response.response.response_code);
+        Ok(Self {
+            response: Ok(types::RefundsResponseData {
+                connector_refund_id: _item.response.transaction_id,
+                refund_status,
+            }),
+            .._item.data
+        })
+
     }
 }
 
