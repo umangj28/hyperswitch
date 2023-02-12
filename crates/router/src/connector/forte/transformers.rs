@@ -139,19 +139,31 @@ pub struct DefaultResponse {
 #[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct ForteResponse {
     transaction_id: String,
+    action: String,
     response: DefaultResponse
+}
+
+fn get_payment_status(resp: FortePaymentsResponse) -> enums::AttemptStatus {
+    match (resp.action.as_str(), resp.response.response_code.as_str()) {
+        ("sale","A01") => enums::AttemptStatus::Charged,
+        ("authorize","A01") => enums::AttemptStatus::Authorized,
+        ("capture", "A01") => enums::AttemptStatus::Charged,
+        ("void", "A01") => enums::AttemptStatus::Voided,
+        (_, _) => enums::AttemptStatus::Failure
+
+    }
 }
 
 impl<F,T> TryFrom<types::ResponseRouterData<F, FortePaymentsResponse, T, types::PaymentsResponseData>> for types::RouterData<F, T, types::PaymentsResponseData> {
     type Error = error_stack::Report<errors::ParsingError>;
     fn try_from(item: types::ResponseRouterData<F, FortePaymentsResponse, T, types::PaymentsResponseData>) -> Result<Self,Self::Error> {
-        let mut txn_id= String::from(item.response.transaction_id);
+        let mut txn_id= String::from(item.response.clone().transaction_id);
         txn_id.push_str(":_:");
         txn_id.push_str(item.response.response.authorization_code.as_str());
         txn_id.push_str(":_:");
         txn_id.push_str(item.response.entered_by.as_str());
         Ok(Self {
-            status: enums::AttemptStatus::from(enums::AttemptStatus::Authorized),
+            status: enums::AttemptStatus::from(get_payment_status(item.response)),
             response: Ok(types::PaymentsResponseData::TransactionResponse {
                 resource_id: types::ResponseId::ConnectorTransactionId(txn_id),
                 redirection_data: None,
@@ -164,11 +176,22 @@ impl<F,T> TryFrom<types::ResponseRouterData<F, FortePaymentsResponse, T, types::
     }
 }
 
+fn get_payment_status2(resp: ForteResponse) -> enums::AttemptStatus {
+    match (resp.action.as_str(), resp.response.response_code.as_str()) {
+        ("sale","A01") => enums::AttemptStatus::Charged,
+        ("authorize","A01") => enums::AttemptStatus::Authorized,
+        ("capture", "A01") => enums::AttemptStatus::Charged,
+        ("void", "A01") => enums::AttemptStatus::Voided,
+        (_, _) => enums::AttemptStatus::Failure
+
+    }
+}
+
 impl<F,T> TryFrom<types::ResponseRouterData<F, ForteResponse, T, types::PaymentsResponseData>> for types::RouterData<F, T, types::PaymentsResponseData> {
     type Error = error_stack::Report<errors::ParsingError>;
     fn try_from(item: types::ResponseRouterData<F, ForteResponse, T, types::PaymentsResponseData>) -> Result<Self,Self::Error> {
         Ok(Self {
-            status: enums::AttemptStatus::from(enums::AttemptStatus::Authorized),
+            status: enums::AttemptStatus::from(get_payment_status2(item.response.clone())),
             response: Ok(types::PaymentsResponseData::TransactionResponse {
                 resource_id: types::ResponseId::ConnectorTransactionId(item.response.transaction_id),
                 redirection_data: None,
