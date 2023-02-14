@@ -166,6 +166,7 @@ where
                     let response = call_connector_api(state, request).await;
                     match response {
                         Ok(body) => {
+                            logger::debug!(response_response=?body);
                             let response = match body {
                                 Ok(body) => connector_integration.handle_response(req, body)?,
                                 Err(body) => {

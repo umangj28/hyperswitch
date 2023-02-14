@@ -183,7 +183,16 @@ impl
         &self,
         res: types::Response,
     ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
-        self.build_error_response(res)
+        let response: forte::ErrorDesc = res
+            .response
+            .parse_struct("Forte ErrorDesc")
+            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
+        Ok(ErrorResponse {
+            status_code: res.status_code,
+            code: res.status_code.to_string(),
+            message: response.response.response_desc,
+            reason: None,
+        })
     }
 }
 
@@ -247,7 +256,16 @@ impl
         &self,
         res: Response,
     ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
-        self.build_error_response(res)
+        let response: forte::ForteResponse = res
+            .response
+            .parse_struct("Forte Response")
+            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
+        Ok(ErrorResponse {
+            status_code: res.status_code,
+            code: response.response.response_code,
+            message: response.response.response_desc,
+            reason: None,
+        })
     }
 
     fn handle_response(
@@ -365,7 +383,16 @@ impl
         &self,
         res: Response,
     ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
-        self.build_error_response(res)
+        let response: forte::ErrorDesc = res
+            .response
+            .parse_struct("Forte ErrorDesc")
+            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
+        Ok(ErrorResponse {
+            status_code: res.status_code,
+            code: res.status_code.to_string(),
+            message: response.response.response_desc,
+            reason: None,
+        })
     }
 }
 
@@ -450,7 +477,16 @@ impl
     }
 
     fn get_error_response(&self, res: Response) -> CustomResult<ErrorResponse,errors::ConnectorError> {
-        self.build_error_response(res)
+        let response: forte::ForteResponse = res
+            .response
+            .parse_struct("Forte Response")
+            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
+        Ok(ErrorResponse {
+            status_code: res.status_code,
+            code: response.response.response_code,
+            message: response.response.response_desc,
+            reason: None,
+        })
     }
 }
 

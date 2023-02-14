@@ -128,19 +128,28 @@ pub struct FortePaymentsResponse {
         response: Response
       }
 
+#[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct Desc {
+    pub response_desc: String
+}
+
+#[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct ErrorDesc {
+    pub response : Desc
+}
 
 #[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct DefaultResponse {
-    response_type : String,
-    response_code:String,
-    response_desc:String,
+    pub response_type : String,
+    pub response_code:String,
+    pub response_desc:String,
 }
 
 #[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct ForteResponse {
     transaction_id: String,
     action: String,
-    response: DefaultResponse
+    pub response: DefaultResponse
 }
 
 fn get_payment_status(resp: FortePaymentsResponse) -> enums::AttemptStatus {
@@ -215,10 +224,12 @@ impl TryFrom<&types::PaymentsCaptureRouterData> for FortePaymentsCaptureRequest 
     type Error = error_stack::Report<errors::ConnectorError>;
     fn try_from(item: &types::PaymentsCaptureRouterData) -> Result<Self, Self::Error> {
         let v :Vec<&str> = item.request.connector_transaction_id.as_str().split(":_:").collect();
+        let t_id = if v.len()>0 {v[0]} else {""};
+        let auth_code = if v.len()>1 {v[1]} else {""};
         let pp = Self {
             action: "capture".to_string(),
-            transaction_id: v[0].to_string(),
-            authorization_code: v[1].to_string(),
+            transaction_id: t_id.to_string(),
+            authorization_code: auth_code.to_string(),
         };
         println!("something 4--> {pp:?}");
         let tmp = serde_json::to_string(&pp);
@@ -243,10 +254,12 @@ impl TryFrom<&types::PaymentsCancelRouterData> for FortePaymentsVoidRequest {
     type Error = error_stack::Report<errors::ConnectorError>;
     fn try_from(item: &types::PaymentsCancelRouterData) -> Result<Self, Self::Error> {
         let v :Vec<&str> = item.request.connector_transaction_id.as_str().split(":_:").collect();
+        let enter_by = if v.len()>2 {v[2]} else {""};
+        let auth_code = if v.len()>1 {v[1]} else {""};
         let pp = Self {
             action: "void".to_string(),
-            authorization_code: v[1].to_string(),
-            entered_by: v[2].to_string()
+            authorization_code: auth_code.to_string(),
+            entered_by: enter_by.to_string()
         };
         println!("something 4--> {pp:?}");
         let tmp = serde_json::to_string(&pp);
@@ -281,12 +294,13 @@ impl<F> TryFrom<&types::RefundsRouterData<F>> for ForteRefundRequest {
     fn try_from(_item: &types::RefundsRouterData<F>) -> Result<Self,Self::Error> {
     //    todo!()
     let v :Vec<&str> = _item.request.connector_transaction_id.as_str().split(":_:").collect();
+    let t_id = if v.len()>0 {v[0]} else {""};
+    let auth_code = if v.len()>1 {v[1]} else {""};
     Ok(Self {
         action: "reverse".to_string() ,
         authorization_amount: _item.request.refund_amount as f32,
-        original_transaction_id : v[0].to_string(),
-        // original_transaction_id: "trn_ac0b85e9-c9f2-4cf4-8666-e2bdfc3cd784".to_string(),
-        authorization_code : v[1].to_string()
+        original_transaction_id : t_id.to_string(),
+        authorization_code : auth_code.to_string()
     })
     
     }
